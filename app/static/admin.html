@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Civic Service Admin</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f4f7fb;
+        }
+
+        .header {
+            background: #2f72da;
+            color: white;
+            padding: 20px;
+        }
+
+        .container {
+            padding: 20px;
+        }
+
+        .filter-row,
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .filter-row input,
+        .filter-row select {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+            padding: 15px;
+            margin-bottom: 12px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .card-header strong {
+            color: #333;
+        }
+
+        .card-body {
+            margin-top: 10px;
+            line-height: 1.5;
+        }
+
+        .update-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            align-items: center;
+        }
+
+        button {
+            background: #2f72da;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            background: #aaa;
+            cursor: not-allowed;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 14px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>AI Civic Service Admin</h1>
+    </div>
+    <div class="container">
+        <div class="filter-row">
+            <select id="category">
+                <option value="">All categories</option>
+                <option>Water</option>
+                <option>Waste</option>
+                <option>Electricity</option>
+                <option>Road</option>
+                <option>Drainage</option>
+                <option>Safety</option>
+                <option>Other</option>
+            </select>
+            <select id="priority">
+                <option value="">All priorities</option>
+                <option>Low</option>
+                <option>Medium</option>
+                <option>High</option>
+                <option>Critical</option>
+            </select>
+            <select id="status">
+                <option value="">All statuses</option>
+                <option>Open</option>
+                <option>Assigned</option>
+                <option>In Progress</option>
+                <option>Resolved</option>
+            </select>
+            <input id="search" type="text" placeholder="Search description or location" />
+            <button onclick="loadComplaints()">Refresh</button>
+        </div>
+        <div class="stats" id="stats"></div>
+        <div id="complaints"></div>
+    </div>
+    <script>
+        const BASE = '/';
+        async function fetchComplaints() {
+            const category = document.getElementById('category').value;
+            const priority = document.getElementById('priority').value;
+            const status = document.getElementById('status').value;
+            const search = document.getElementById('search').value;
+            const params = new URLSearchParams();
+            if (category) params.append('category', category);
+            if (priority) params.append('priority', priority);
+            if (status) params.append('status', status);
+            if (search) params.append('search', search);
+            const res = await fetch('/complaints?' + params.toString());
+            return res.json();
+        }
+        async function fetchStats() {
+            const res = await fetch('/stats');
+            return res.json();
+        }
+        async function loadComplaints() {
+            const complaints = await fetchComplaints();
+            const container = document.getElementById('complaints');
+            container.innerHTML = '';
+            complaints.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div class="card-header"><strong>#${item.complaint_id} ${item.category} - ${item.priority}</strong><span>${item.status}</span></div>
+                    <div class="card-body">
+                        <p>${item.description}</p>
+                        <p><strong>Location:</strong> ${item.location || 'N/A'}</p>
+                        <p><strong>Date:</strong> ${item.date}</p>
+                        <p><strong>Assigned Dept:</strong> ${item.assigned_department || 'Unassigned'}</p>
+                        <p><strong>Recommended Dept:</strong> ${item.recommended_department || 'General Services'}</p>
+                        <p><strong>Resolved:</strong> ${item.resolved_date || 'No'}</p>
+                        <div class="update-row">
+                            <select id="status_${item.complaint_id}"><option value="">Change status</option><option>Open</option><option>Assigned</option><option>In Progress</option><option>Resolved</option></select>
+                            <input id="dept_${item.complaint_id}" type="text" placeholder="Department" value="${item.assigned_department || ''}" />
+                            <button onclick="updateComplaint(${item.complaint_id})">Save</button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+        async function loadStats() {
+            const stats = await fetchStats();
+            const el = document.getElementById('stats');
+            el.innerHTML = '';
+            const items = [
+                ['Total complaints', stats.total_complaints],
+                ['Resolved count', stats.resolution_count],
+                ['Average hours', stats.resolution_hours.mean ?? 'N/A'],
+                ['Median hours', stats.resolution_hours.median ?? 'N/A'],
+                ['Open complaints', stats.status_distribution.find(x => x.Open)?.Open || 0],
+            ];
+            items.forEach(([label, value]) => {
+                const card = document.createElement('div');
+                card.className = 'stat-card';
+                card.innerHTML = `<strong>${label}</strong><p>${value}</p>`;
+                el.appendChild(card);
+            });
+        }
+        async function updateComplaint(id) {
+            const status = document.getElementById(`status_${id}`).value;
+            const department = document.getElementById(`dept_${id}`).value;
+            const body = {};
+            if (status) body.status = status;
+            if (department) body.assigned_department = department;
+            if (!Object.keys(body).length) return;
+            const res = await fetch(`/complaints/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            if (res.ok) {
+                alert('Complaint updated');
+                await loadComplaints();
+                await loadStats();
+            } else {
+                alert('Update failed');
+            }
+        }
+        loadStats();
+        loadComplaints();
+    </script>
+</body>
+
+</html>

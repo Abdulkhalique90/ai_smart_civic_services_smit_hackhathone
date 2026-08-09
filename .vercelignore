@@ -1,0 +1,6 @@
+**
+!.vercelignore
+!public/**
+!README.md
+!requirements.txt
+!vercel.json

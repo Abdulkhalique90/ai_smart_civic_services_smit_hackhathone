@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+*.db
+*.env
+.vscode/
+.DS_Store
+node_modules/
+*.log
+AI_Smart_Civic_Services_Hackathon_Project_2.pdf
+Complaint_Attorney_2023_CDMX.csv
