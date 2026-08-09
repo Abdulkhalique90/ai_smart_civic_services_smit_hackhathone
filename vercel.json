@@ -3,14 +3,8 @@
     "name": "ai-smart-civic-admin",
     "builds": [
         {
-            "src": "public/**/*",
+            "src": "public/**",
             "use": "@vercel/static"
-        }
-    ],
-    "routes": [
-        {
-            "src": "/(.*)",
-            "dest": "/public/index.html"
         }
     ]
 }
